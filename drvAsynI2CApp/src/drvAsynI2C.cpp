@@ -35,7 +35,7 @@
 #include <linux/i2c.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
-//#include <sys/select.h>
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -54,22 +54,23 @@
 #include "drvAsynI2C.h"
 
 //_____ D E F I N I T I O N S __________________________________________________
+#define USE_SELECT_FOR_TIMEOUT
 
 //_____ G L O B A L S __________________________________________________________
 
 //_____ L O C A L S ____________________________________________________________
-static epicsTimerId       i2c_timer;
-static epicsTimerQueueId  i2c_timerQueue;
+//static epicsTimerId       i2c_timer;
+//static epicsTimerQueueId  i2c_timerQueue;
 
 //_____ F U N C T I O N S ______________________________________________________
 
 //------------------------------------------------------------------------------
 //! @brief       Timeout handler for I2C communication 
 //------------------------------------------------------------------------------
-static void timeoutHandler( void *ptr ) {
-  drvAsynI2C *pi2c = static_cast<drvAsynI2C*>( ptr );
-  pi2c->timeout();
-}
+//static void timeoutHandler( void *ptr ) {
+//  drvAsynI2C *pi2c = static_cast<drvAsynI2C*>( ptr );
+//  pi2c->timeout();
+//}
 
 //------------------------------------------------------------------------------
 //! @brief       Called when asyn clients call pasynOctet->read().
@@ -97,18 +98,19 @@ asynStatus drvAsynI2C::readOctet( asynUser *pasynUser, char *value, size_t maxCh
   }
   if( maxChars <= 0 ) {
     epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize,
-                   "%s: %s maxchars %d Why <=0?", portName, _deviceName, (int)maxchars );
+                   "%s: %s maxchars %d Why <=0?", portName, _deviceName, (int)maxChars );
     return asynError;
   }
 
-  int thisRead = 0;
   int nRead = 0;
-  bool timerStarted = false;
   asynStatus status = asynSuccess;
-
-  _timeout = false;
-
   if( eomReason ) *eomReason = 0;
+
+#ifndef USE_SELECT_FOR_TIMEOUT
+
+  int thisRead = 0;
+  bool timerStarted = false;
+  _timeout = false;
 
   for(;;) {
     if( !timerStarted && pasynUser->timeout > 0 ) {
@@ -135,12 +137,13 @@ asynStatus drvAsynI2C::readOctet( asynUser *pasynUser, char *value, size_t maxCh
   if( timerStarted ) epicsTimerCancel( i2c_timer );
   if( _timeout && asynSuccess == status ) status = asynTimeout;
 
-/*
+#else
+
   int mytimeout = (int)( pasynUser->timeout * 1.e6 );
   if ( 0 > mytimeout ) {
 
-    nbytes = read( _fd, value, maxChars );
-    if ( 0 > nbytes ) {
+    nRead = read( _fd, value, maxChars );
+    if ( 0 > nRead ) {
       epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize, 
                      "Error receiving message from device '%s': %d %s", 
                      _deviceName, errno, strerror( errno ) );
@@ -164,8 +167,8 @@ asynStatus drvAsynI2C::readOctet( asynUser *pasynUser, char *value, size_t maxCh
     
     // the only one file descriptor is ready for read
     if ( 0 < err ) {
-      nbytes = read( _fd, value, maxChars );
-      if ( 0 > nbytes ) {
+      nRead = read( _fd, value, maxChars );
+      if ( 0 > nRead ) {
         epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize, 
                        "Error receiving message from device '%s': %d %s", 
                        _deviceName, errno, strerror( errno ) );
@@ -182,10 +185,11 @@ asynStatus drvAsynI2C::readOctet( asynUser *pasynUser, char *value, size_t maxCh
       return asynError;
     }
   }
-*/
 
-  *nActual = nbytes;
-  if( eomReason && nbytes >= maxChars ) {
+#endif
+
+  *nActual = nRead;
+  if( eomReason && *nActual >= maxChars ) {
     *eomReason = ASYN_EOM_CNT;
   }
 
@@ -218,7 +222,6 @@ asynStatus drvAsynI2C::writeOctet( asynUser *pasynUser, char const *value, size_
                                    size_t *nActual ){
 
   int thisWrite = 0;
-  bool timerStarted = false;
   asynStatus status = asynSuccess;
 
   if( _fd < 0 ) {
@@ -231,22 +234,35 @@ asynStatus drvAsynI2C::writeOctet( asynUser *pasynUser, char const *value, size_
     return asynSuccess;
   }
 
-  _timeout = false;
-
   int addr = value[0];
   if( addr != _slaveAddress ) {
     // set slave address
-   if( ioctl( _fd, I2C_SLAVE, addr ) < 0 ) {
-     epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize,
-                    "%s: %s Can't set slave address: %s",
-                    portName, _deviceName, strerror( errno ) );
-     return asynError;
-
+    if( ioctl( _fd, I2C_SLAVE, addr ) < 0 ) {
+      epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize,
+                     "%s: %s Can't set slave address: %s",
+                     portName, _deviceName, strerror( errno ) );
+      return asynError;
+    }
     _slaveAddress = addr;
-   }
+    //status = (asynStatus) setIntegerParam( _paramSlaveAddress, addr );
+    asynPrint( pasynUser, ASYN_TRACEIO_DRIVER, 
+               "%s: %s set new slave address: 0x%02x, return %s\n",
+               portName, _deviceName, addr,
+               pasynManager->strStatus( status ) );
+  }
   ++value;
   int nleft = maxChars - 1;
+
   if( 0 < nleft ) {
+    printf( "%s: sending %d bytes to %s: ", portName, nleft, _deviceName );
+    for( size_t i = 1; i < maxChars; ++i )
+      printf( "0x%02x ", value[i] );
+    printf( "\n\n" );
+
+#ifndef USE_SELECT_FOR_TIMEOUT
+
+  _timeout = false;
+  bool timerStarted = false;
 
     if( pasynUser->timeout > 0 ) {
       epicsTimerStartDelay( i2c_timer, pasynUser->timeout );
@@ -270,12 +286,66 @@ asynStatus drvAsynI2C::writeOctet( asynUser *pasynUser, char const *value, size_
         epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize,
                        "%s: %s write error: %s",
                        portName, _deviceName, strerror( errno ) );
+        asynPrint( pasynUser, ASYN_TRACEIO_DRIVER, 
+                       "%s: %s write error: %s\n",
+                       portName, _deviceName, strerror( errno ) );
         status = asynError;
         break;
       }
     }
     if( timerStarted ) epicsTimerCancel( i2c_timer );
 
+#else
+
+    int mytimeout = (int)( pasynUser->timeout * 1.e6 );
+    if ( 0 > mytimeout ) {
+
+      thisWrite = write( _fd, value, nleft );
+      if ( 0 > thisWrite ) {
+        epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize, 
+                       "%s: %s write error: %s", 
+                       portName, _deviceName, strerror( errno ) );
+        return asynError;
+      }
+
+    } else {
+
+      fd_set fdWrite;
+      struct timeval t;
+      
+      // calculate timeout values
+      t.tv_sec  = mytimeout / 1000000L;
+      t.tv_usec = mytimeout % 1000000L;
+      
+      FD_ZERO( &fdWrite );
+      FD_SET( _fd, &fdWrite );
+      
+      // wait until timeout or device os read to write
+      int err = select( _fd + 1, NULL, &fdWrite, NULL, &t );
+      
+      // the only one file descriptor is ready for writing
+      if ( 0 < err ) {
+        thisWrite = write( _fd, value, nleft );
+        if ( 0 > thisWrite ) {
+          epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize, 
+                         "Error receiving message from device '%s': %d %s", 
+                         _deviceName, errno, strerror( errno ) );
+          return asynError;
+        }
+        nleft -= thisWrite;
+      }
+      
+      // nothing is ready, timeout occured
+      if ( 0 == err ) return asynTimeout;
+      if ( 0 > err )  {
+        epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize, 
+                       "Error receiving message from device '%s': %d %s", 
+                       _deviceName, errno, strerror( errno ) );
+        return asynError;
+      }
+    }
+
+#endif
   }
 
   *nActual = maxChars - nleft;
@@ -309,7 +379,7 @@ asynStatus drvAsynI2C::connect( asynUser *pasynUser ) {
                    "%s: Can't open %s: %s", portName, _deviceName, strerror( errno ) );
     return asynError;
   }
-  if( ioctl( _fd, I2C_FUNCS, _i2cfuncs ) < 0 ) {
+  if( ioctl( _fd, I2C_FUNCS, &_i2cfuncs ) < 0 ) {
     epicsSnprintf( pasynUser->errorMessage,pasynUser->errorMessageSize,
                    "%s: Can't get functionality of %s: %s", portName, _deviceName, strerror( errno ) );
     return asynError;
@@ -328,7 +398,7 @@ asynStatus drvAsynI2C::connect( asynUser *pasynUser ) {
 asynStatus drvAsynI2C::disconnect( asynUser *pasynUser ) {
   asynPrint( pasynUser, ASYN_TRACEIO_DRIVER,
              "%s: disconnect %s\n", portName, _deviceName );
-  epicsTimerCancel( i2c_timer );
+//  epicsTimerCancel( i2c_timer );
   if( _fd >= 0 ) {
     close( _fd );
     _fd = -1;
@@ -344,8 +414,8 @@ asynStatus drvAsynI2C::disconnect( asynUser *pasynUser ) {
 //------------------------------------------------------------------------------
 drvAsynI2C::drvAsynI2C( const char *portName, const char *ttyName ) 
   : asynPortDriver( portName,
-                    1, // maxAddr
-                    2,
+                    0, // maxAddr
+                    0, // paramTableSize
                     asynCommonMask | asynOctetMask | asynDrvUserMask, // Interface mask
                     asynCommonMask | asynOctetMask,  // Interrupt mask
                     ASYN_CANBLOCK, // asynFlags
@@ -356,6 +426,9 @@ drvAsynI2C::drvAsynI2C( const char *portName, const char *ttyName )
   _deviceName = epicsStrDup( ttyName );
   _fd = -1;
   _slaveAddress = 0;
+
+//  createParam( SLAVEADDRESS_STRING, asynParamInt32, &_paramSlaveAddress );
+
 }
 
 // Configuration routines.  Called directly, or from the iocsh function below 
@@ -375,13 +448,13 @@ extern "C" {
       printf( "TTY name missing.\n" );
       return -1;
     }
-    drvAsynI2C* pi2c = new drvAsynCan( portName, ttyName );
-    i2c_timerQueue = epicsTimerQueueAllocate( 1, epicsThreadPriorityScanLow );
-    i2c_timer = epicsTimerQueueCreateTimer( i2c_timerQueue, timeoutHandler, pi2c );
-    if( !i2c_timer ) {
-      printf( "drvAsynI2C: Can't create timer.\n");
-      return -1;
-    }
+    drvAsynI2C* pi2c = new drvAsynI2C( portName, ttyName );
+//    i2c_timerQueue = epicsTimerQueueAllocate( 1, epicsThreadPriorityScanLow );
+//    i2c_timer = epicsTimerQueueCreateTimer( i2c_timerQueue, timeoutHandler, pi2c );
+//    if( !i2c_timer ) {
+//      printf( "drvAsynI2C: Can't create timer.\n");
+//      return -1;
+//    }
     return( asynSuccess );
   }
   static const iocshArg initI2CArg0 = { "portName", iocshArgString };

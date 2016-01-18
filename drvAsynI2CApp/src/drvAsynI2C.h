@@ -36,6 +36,8 @@
 
 //_____ D E F I N I T I O N S __________________________________________________
 
+// #define SLAVEADDRESS_STRING "SLAVEADDRESS"
+
 //! @brief   asynPortDriver for I2C
 //!
 class drvAsynI2C : public asynPortDriver {
@@ -47,21 +49,24 @@ class drvAsynI2C : public asynPortDriver {
                                 size_t *nActual, int *eomReason );
   virtual asynStatus writeOctet( asynUser *pasynUser, char const *value, size_t maxChars,
                                  size_t *nActual );
-  virtual asynStatus readOption( asynUser *pasynUser, char const *key, char *value, int maxChars );
-  virtual asynStatus writeOption( asynUser *pasynUser, char const *key, char const *value );
+//  virtual asynStatus readOption( asynUser *pasynUser, char const *key, char *value, int maxChars );
+//  virtual asynStatus writeOption( asynUser *pasynUser, char const *key, char const *value );
 
   virtual asynStatus connect( asynUser *pasynUser );
   virtual asynStatus disconnect( asynUser *pasynUser );
 
-  inline timeout() { _timeout = true; }
+//  inline void timeout() { _timeout = true; }
+
+ protected:
+//  int _paramSlaveAddress;
 
  private:
 
   // Our data
   char* _deviceName;
   int   _fd;
-  bool  _timeout;
-  long  _i2cfuncs;
+//  bool  _timeout;
+  unsigned long  _i2cfuncs;
   int   _slaveAddress;
 //  epicsTimerId       _timer;
 //  epicsTimerQueueId  _timerQueue;

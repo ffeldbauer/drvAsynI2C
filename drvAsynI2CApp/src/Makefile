@@ -16,9 +16,9 @@ LIBRARY_IOC += drvAsynI2C
 DBD += drvAsynI2C.dbd
 
 # specify all source files to be compiled and added to the library
-#drvAsynI2C_SRCS += xxx
+drvAsynI2C_SRCS += drvAsynI2C.cpp
 
-drvAsynI2C_LIBS += $(EPICS_BASE_IOC_LIBS)
+drvAsynI2C_LIBS += $(EPICS_BASE_IOC_LIBS) asyn
 
 #===========================
 

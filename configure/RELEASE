@@ -25,6 +25,8 @@ TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
 #SNCSEQ=$(EPICS_BASE)/../modules/soft/seq
 
 # EPICS_BASE usually appears last so other apps can override stuff:
+#EPICS_BASE = /etc/epics/base
+#ASYN       = /etc/epics/asyn
 EPICS_BASE = /opt/epics/base
 ASYN       = /opt/epics/modules/asyn
 # Set RULES here if you want to take build rules from somewhere
