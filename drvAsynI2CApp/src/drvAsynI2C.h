@@ -42,7 +42,7 @@
 //!
 class drvAsynI2C : public asynPortDriver {
  public:
-  drvAsynI2C( const char *portName, const char *ttyName );
+  drvAsynI2C( const char *portName, const char *ttyName, int autoConnect );
 
   // These are the methods that we override from asynPortDriver
   virtual asynStatus readOctet( asynUser *pasynUser, char *value, size_t maxChars,

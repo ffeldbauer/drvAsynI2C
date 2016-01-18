@@ -193,6 +193,13 @@ asynStatus drvAsynI2C::readOctet( asynUser *pasynUser, char *value, size_t maxCh
     *eomReason = ASYN_EOM_CNT;
   }
 
+    ///// for debugginf
+    printf( "%s: read %d bytes from %s: ", portName, nRead, _deviceName );
+    for( int i = 0; i < nRead; ++i )
+      printf( "0x%02x ", value[i] );
+    printf( "\n\n" );
+    /////
+
   asynPrint( pasynUser, ASYN_TRACEIO_DRIVER, 
              "%s: read %lu bytes from %s, return %s\n",
              portName, (unsigned long)*nActual, _deviceName,
@@ -254,10 +261,12 @@ asynStatus drvAsynI2C::writeOctet( asynUser *pasynUser, char const *value, size_
   int nleft = maxChars - 1;
 
   if( 0 < nleft ) {
+    ///// for debugginf
     printf( "%s: sending %d bytes to %s: ", portName, nleft, _deviceName );
-    for( size_t i = 1; i < maxChars; ++i )
+    for( int i = 0; i < nleft; ++i )
       printf( "0x%02x ", value[i] );
     printf( "\n\n" );
+    /////
 
 #ifndef USE_SELECT_FOR_TIMEOUT
 
@@ -409,17 +418,18 @@ asynStatus drvAsynI2C::disconnect( asynUser *pasynUser ) {
 
 //------------------------------------------------------------------------------
 //! @brief       Standard C'tor.
-//! @param [in]  portName The name of the asynPortDriver to be created.
-//! @param [in]  ttyName  The name of the device
+//! @param [in]  portName     The name of the asynPortDriver to be created.
+//! @param [in]  ttyName      The name of the device
+//! @param [in]  autoConnect  ...
 //------------------------------------------------------------------------------
-drvAsynI2C::drvAsynI2C( const char *portName, const char *ttyName ) 
+drvAsynI2C::drvAsynI2C( const char *portName, const char *ttyName, int autoConnect ) 
   : asynPortDriver( portName,
                     0, // maxAddr
                     0, // paramTableSize
                     asynCommonMask | asynOctetMask | asynDrvUserMask, // Interface mask
                     asynCommonMask | asynOctetMask,  // Interrupt mask
                     ASYN_CANBLOCK, // asynFlags
-                    1,  // Autoconnect
+                    autoConnect,  // Autoconnect
                     0,  // Default priority
                     0 ) // Default stack size
 {
@@ -439,7 +449,7 @@ extern "C" {
   //! @param [in]  portName The name of the asyn port driver to be created.
   //! @param [in]  ttyName  The name of the interface 
   //----------------------------------------------------------------------------
-  int drvAsynI2CConfigure( const char *portName, const char *ttyName ) {
+  int drvAsynI2CConfigure( const char *portName, const char *ttyName, int autoConnect = 0 ) {
     if( !portName ) {
       printf( "Port name missing.\n" );
       return -1;
@@ -448,7 +458,7 @@ extern "C" {
       printf( "TTY name missing.\n" );
       return -1;
     }
-    drvAsynI2C* pi2c = new drvAsynI2C( portName, ttyName );
+    drvAsynI2C* pi2c = new drvAsynI2C( portName, ttyName, autoConnect );
 //    i2c_timerQueue = epicsTimerQueueAllocate( 1, epicsThreadPriorityScanLow );
 //    i2c_timer = epicsTimerQueueCreateTimer( i2c_timerQueue, timeoutHandler, pi2c );
 //    if( !i2c_timer ) {
@@ -459,10 +469,11 @@ extern "C" {
   }
   static const iocshArg initI2CArg0 = { "portName", iocshArgString };
   static const iocshArg initI2CArg1 = { "ttyName",  iocshArgString };
-  static const iocshArg * const initI2CArgs[] = { &initI2CArg0, &initI2CArg1 };
-  static const iocshFuncDef initI2CFuncDef = { "drvAsynI2CConfigure", 2, initI2CArgs };
+  static const iocshArg initI2CArg2 = { "autoConnect",  iocshArgInt };
+  static const iocshArg * const initI2CArgs[] = { &initI2CArg0, &initI2CArg1, &initI2CArg2 };
+  static const iocshFuncDef initI2CFuncDef = { "drvAsynI2CConfigure", 3, initI2CArgs };
   static void initI2CCallFunc( const iocshArgBuf *args ) {
-    drvAsynI2CConfigure( args[0].sval, args[1].sval );
+    drvAsynI2CConfigure( args[0].sval, args[1].sval, args[2].ival );
   }
 
   //----------------------------------------------------------------------------
