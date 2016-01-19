@@ -36,8 +36,8 @@ The setting of this bit is managed by the kernel module.
 
 The directory `example` contains a small IOC controlling an AD7998 ADC.
 (Note: This example uses also the devGpio device support which can also
- be found on [github][https://github.com/ffeldbauer/epics-devgpio])
+ be found on [github](https://github.com/ffeldbauer/epics-devgpio) )
 
 ## Known Issues
    - With streamDevice 2.6 downloaded from the PSI webpage this module enters an endless loop.
-     Use the release 2.6c from [github][https://github.com/epics-modules/stream]
+     Use the release 2.6c from [github](https://github.com/epics-modules/stream)
