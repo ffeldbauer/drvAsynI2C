@@ -1,0 +1,22 @@
+Terminator   = "";
+LockTimeout  = 500;
+ReplyTimeout = 100;
+ReadTimeout  = 100;
+WriteTimeout = 100;
+MaxInput     = 2;
+ExtraInput   = Error;
+
+wCtrl {
+  out ${1} 2 "%02r"; 
+}
+
+rCtrl {
+  out ${1} 2; 
+  in  "%02r";
+}
+
+rConv {
+  out ${1} 1;
+  in  "%02r";
+}
+

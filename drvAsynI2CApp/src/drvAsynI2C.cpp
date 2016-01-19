@@ -1,15 +1,15 @@
 //******************************************************************************
 // Copyright (C) 2015 Florian Feldbauer <florian@ep1.ruhr-uni-bochum.de>
-//                    - University Mainz, Institute foer nuc
+//                    - University Mainz, Institute foer nuclear physics
 //
-// This file is part of drvAsynCan
+// This file is part of drvAsynI2C
 //
-// drvAsynCan is free software; you can redistribute it and/or modify
+// drvAsynI2C is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation; either version 3 of the License, or
 // (at your option) any later version.
 //
-// drvAsynCan is distributed in the hope that it will be useful,
+// drvAsynI2C is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
@@ -18,21 +18,19 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
-// brief   AsynPortDriver for PANDA Raspberry Pi CAN interface
-//
-// version 3.0.0; Jul. 29, 2014
+// version 1.0.0; Nov. 17, 2015
 //******************************************************************************
 
 //_____ I N C L U D E S _______________________________________________________
 
-// ANSI C includes
+// ANSI C/C++ includes
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
 #include <fcntl.h>
 #include <linux/i2c-dev.h>
-#include <linux/i2c.h>
+//#include <linux/i2c.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/select.h>
@@ -46,7 +44,6 @@
 #include <epicsString.h>
 #include <epicsThread.h>
 #include <epicsTime.h>
-#include <epicsTimer.h>
 #include <epicsTypes.h>
 #include <iocsh.h>
 
@@ -54,23 +51,12 @@
 #include "drvAsynI2C.h"
 
 //_____ D E F I N I T I O N S __________________________________________________
-#define USE_SELECT_FOR_TIMEOUT
 
 //_____ G L O B A L S __________________________________________________________
 
 //_____ L O C A L S ____________________________________________________________
-//static epicsTimerId       i2c_timer;
-//static epicsTimerQueueId  i2c_timerQueue;
 
 //_____ F U N C T I O N S ______________________________________________________
-
-//------------------------------------------------------------------------------
-//! @brief       Timeout handler for I2C communication 
-//------------------------------------------------------------------------------
-//static void timeoutHandler( void *ptr ) {
-//  drvAsynI2C *pi2c = static_cast<drvAsynI2C*>( ptr );
-//  pi2c->timeout();
-//}
 
 //------------------------------------------------------------------------------
 //! @brief       Called when asyn clients call pasynOctet->read().
@@ -106,41 +92,8 @@ asynStatus drvAsynI2C::readOctet( asynUser *pasynUser, char *value, size_t maxCh
   asynStatus status = asynSuccess;
   if( eomReason ) *eomReason = 0;
 
-#ifndef USE_SELECT_FOR_TIMEOUT
-
-  int thisRead = 0;
-  bool timerStarted = false;
-  _timeout = false;
-
-  for(;;) {
-    if( !timerStarted && pasynUser->timeout > 0 ) {
-      epicsTimerStartDelay( i2c_timer, pasynUser->timeout );
-      timerStarted = true;
-    }
-    thisRead = read( _fd, value, maxChars );
-    if( thisRead > 0 ) {
-      nRead = thisRead;
-      break;
-    } else {
-      if( thisRead < 0 && ( errno != EWOULDBLOCK )
-                       && ( errno != EINTR )
-                       && ( errno != EAGAIN ) ) {
-        epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize,
-                       "%s: %s read error: %s",
-                       portName, _deviceName, strerror( errno ) );
-        status = asynError;
-        break;
-      }
-    }
-    if( _timeout ) break;
-  }
-  if( timerStarted ) epicsTimerCancel( i2c_timer );
-  if( _timeout && asynSuccess == status ) status = asynTimeout;
-
-#else
-
   int mytimeout = (int)( pasynUser->timeout * 1.e6 );
-  if ( 0 > mytimeout ) {
+  if ( 0 >= mytimeout ) {
 
     nRead = read( _fd, value, maxChars );
     if ( 0 > nRead ) {
@@ -168,7 +121,7 @@ asynStatus drvAsynI2C::readOctet( asynUser *pasynUser, char *value, size_t maxCh
     // the only one file descriptor is ready for read
     if ( 0 < err ) {
       nRead = read( _fd, value, maxChars );
-      if ( 0 > nRead ) {
+      if( 0 > nRead ) {
         epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize, 
                        "Error receiving message from device '%s': %d %s", 
                        _deviceName, errno, strerror( errno ) );
@@ -186,19 +139,10 @@ asynStatus drvAsynI2C::readOctet( asynUser *pasynUser, char *value, size_t maxCh
     }
   }
 
-#endif
-
   *nActual = nRead;
   if( eomReason && *nActual >= maxChars ) {
     *eomReason = ASYN_EOM_CNT;
   }
-
-    ///// for debugginf
-    printf( "%s: read %d bytes from %s: ", portName, nRead, _deviceName );
-    for( int i = 0; i < nRead; ++i )
-      printf( "0x%02x ", value[i] );
-    printf( "\n\n" );
-    /////
 
   asynPrint( pasynUser, ASYN_TRACEIO_DRIVER, 
              "%s: read %lu bytes from %s, return %s\n",
@@ -251,7 +195,6 @@ asynStatus drvAsynI2C::writeOctet( asynUser *pasynUser, char const *value, size_
       return asynError;
     }
     _slaveAddress = addr;
-    //status = (asynStatus) setIntegerParam( _paramSlaveAddress, addr );
     asynPrint( pasynUser, ASYN_TRACEIO_DRIVER, 
                "%s: %s set new slave address: 0x%02x, return %s\n",
                portName, _deviceName, addr,
@@ -261,53 +204,9 @@ asynStatus drvAsynI2C::writeOctet( asynUser *pasynUser, char const *value, size_
   int nleft = maxChars - 1;
 
   if( 0 < nleft ) {
-    ///// for debugginf
-    printf( "%s: sending %d bytes to %s: ", portName, nleft, _deviceName );
-    for( int i = 0; i < nleft; ++i )
-      printf( "0x%02x ", value[i] );
-    printf( "\n\n" );
-    /////
-
-#ifndef USE_SELECT_FOR_TIMEOUT
-
-  _timeout = false;
-  bool timerStarted = false;
-
-    if( pasynUser->timeout > 0 ) {
-      epicsTimerStartDelay( i2c_timer, pasynUser->timeout );
-      timerStarted = true;
-    }
-
-    for(;;) {
-      thisWrite = write( _fd, value, nleft );
-      if ( 0 < thisWrite ) {
-        nleft -= thisWrite;
-        if( 0 == nleft ) break;
-        value += thisWrite;
-      }
-      if( _timeout || 0 == pasynUser->timeout ) {
-        status = asynTimeout;
-        break;
-      }
-      if( 0 > thisWrite && ( errno != EWOULDBLOCK )
-                        && ( errno != EINTR )
-                        && ( errno != EAGAIN ) ) {
-        epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize,
-                       "%s: %s write error: %s",
-                       portName, _deviceName, strerror( errno ) );
-        asynPrint( pasynUser, ASYN_TRACEIO_DRIVER, 
-                       "%s: %s write error: %s\n",
-                       portName, _deviceName, strerror( errno ) );
-        status = asynError;
-        break;
-      }
-    }
-    if( timerStarted ) epicsTimerCancel( i2c_timer );
-
-#else
 
     int mytimeout = (int)( pasynUser->timeout * 1.e6 );
-    if ( 0 > mytimeout ) {
+    if ( 0 >= mytimeout ) {
 
       thisWrite = write( _fd, value, nleft );
       if ( 0 > thisWrite ) {
@@ -354,7 +253,6 @@ asynStatus drvAsynI2C::writeOctet( asynUser *pasynUser, char const *value, size_
       }
     }
 
-#endif
   }
 
   *nActual = maxChars - nleft;
@@ -407,7 +305,6 @@ asynStatus drvAsynI2C::connect( asynUser *pasynUser ) {
 asynStatus drvAsynI2C::disconnect( asynUser *pasynUser ) {
   asynPrint( pasynUser, ASYN_TRACEIO_DRIVER,
              "%s: disconnect %s\n", portName, _deviceName );
-//  epicsTimerCancel( i2c_timer );
   if( _fd >= 0 ) {
     close( _fd );
     _fd = -1;
@@ -433,12 +330,24 @@ drvAsynI2C::drvAsynI2C( const char *portName, const char *ttyName, int autoConne
                     0,  // Default priority
                     0 ) // Default stack size
 {
+  asynStatus status;
   _deviceName = epicsStrDup( ttyName );
   _fd = -1;
   _slaveAddress = 0;
 
-//  createParam( SLAVEADDRESS_STRING, asynParamInt32, &_paramSlaveAddress );
+  if( autoConnect ) {
+    // If autoConnect is true then asynPortDriver::connect will have been called by the asynPortDriver
+    // constructor and asynManager will think the port is connected.  Must disconnect and then call
+    // our connect() method
 
+    pasynManager->exceptionDisconnect( pasynUserSelf );
+    status = this->connect( pasynUserSelf );
+    if( status ) {
+      asynPrint( pasynUserSelf, ASYN_TRACE_ERROR,
+                 "drvAsynI2C::drvAsynI2C, error calling connect %s\n",
+                 pasynUserSelf->errorMessage );
+    }
+  }
 }
 
 // Configuration routines.  Called directly, or from the iocsh function below 
@@ -449,7 +358,7 @@ extern "C" {
   //! @param [in]  portName The name of the asyn port driver to be created.
   //! @param [in]  ttyName  The name of the interface 
   //----------------------------------------------------------------------------
-  int drvAsynI2CConfigure( const char *portName, const char *ttyName, int autoConnect = 0 ) {
+  int drvAsynI2CConfigure( const char *portName, const char *ttyName, int autoConnect = 1 ) {
     if( !portName ) {
       printf( "Port name missing.\n" );
       return -1;
@@ -458,13 +367,7 @@ extern "C" {
       printf( "TTY name missing.\n" );
       return -1;
     }
-    drvAsynI2C* pi2c = new drvAsynI2C( portName, ttyName, autoConnect );
-//    i2c_timerQueue = epicsTimerQueueAllocate( 1, epicsThreadPriorityScanLow );
-//    i2c_timer = epicsTimerQueueCreateTimer( i2c_timerQueue, timeoutHandler, pi2c );
-//    if( !i2c_timer ) {
-//      printf( "drvAsynI2C: Can't create timer.\n");
-//      return -1;
-//    }
+    new drvAsynI2C( portName, ttyName, autoConnect );
     return( asynSuccess );
   }
   static const iocshArg initI2CArg0 = { "portName", iocshArgString };

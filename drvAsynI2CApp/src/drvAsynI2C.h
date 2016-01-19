@@ -1,6 +1,6 @@
 //******************************************************************************
 // Copyright (C) 2015 Florian Feldbauer <florian@ep1.ruhr-uni-bochum.de>
-//                    - University Mainz, Institute for nucular physics
+//                    - University Mainz, Institute for nuclear physics
 //
 // This file is part of drvAsynI2C
 //
@@ -29,14 +29,11 @@
 // ANSI C includes
 
 // EPICS includes
-//#include <epicsTimer.h>
 
 // local includes
 #include "asynPortDriver.h"
 
 //_____ D E F I N I T I O N S __________________________________________________
-
-// #define SLAVEADDRESS_STRING "SLAVEADDRESS"
 
 //! @brief   asynPortDriver for I2C
 //!
@@ -55,21 +52,13 @@ class drvAsynI2C : public asynPortDriver {
   virtual asynStatus connect( asynUser *pasynUser );
   virtual asynStatus disconnect( asynUser *pasynUser );
 
-//  inline void timeout() { _timeout = true; }
-
- protected:
-//  int _paramSlaveAddress;
-
  private:
 
   // Our data
   char* _deviceName;
   int   _fd;
-//  bool  _timeout;
   unsigned long  _i2cfuncs;
   int   _slaveAddress;
-//  epicsTimerId       _timer;
-//  epicsTimerQueueId  _timerQueue;
     
 };
 

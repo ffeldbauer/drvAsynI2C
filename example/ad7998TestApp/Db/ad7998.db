@@ -1,0 +1,40 @@
+record( seq,"AD7998:$(ID):CONVST" ) { 
+  field( SELM, "All")
+  field( LNK1, "AD7998:$(ID):CONVST__.VAL" )
+  field( DOL1, "1" )
+  field( DLY1, "0" )
+  field( LNK2, "AD7998:$(ID):CONVST__.VAL" )
+  field( DOL2, "0" )
+  field( DLY2, "0.000002" ) # 2 us
+}
+
+record( bo, "AD7998:$(ID):CONVST__" ) {
+  field( DTYP, "devgpio" )
+  field( OUT,  "@$(CONVST) H" )
+  field( ZNAM, "-" )
+  field( ONAM, "Start conversion" )
+}
+
+record( bi, "AD7998:$(ID):BUSY" ) {
+  field( DTYP, "devgpio" )
+  field( SCAN, "I/O Intr" )
+  field( INP,  "@$(BUSY) L" )
+  field( ZNAM, "IDLE" )
+  field( ONAM, "BUSY" )
+}
+
+record( mbboDirect, "AD7998:$(ID):CTRLREGISTER" ) {
+  field( DTYP, "stream" )
+  field( OUT,  "@ad7998.proto wCtrl($(ID)) I2C" )
+}
+
+record( mbbiDirect, "AD7998:$(ID):CTRLREGISTER:READ" ) {
+  field( DTYP, "stream" )
+  field( INP,  "@ad7998.proto rCtrl($(ID)) I2C" )
+}
+
+record( mbbiDirect, "AD7998:$(ID):RESULT" ) {
+  field( DTYP, "stream" )
+  field( INP,  "@ad7998.proto rConv($(ID)) I2C" )
+}
+
