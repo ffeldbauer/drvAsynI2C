@@ -33,7 +33,7 @@ record( mbbiDirect, "AD7998:$(ID):CTRLREGISTER:READ" ) {
   field( INP,  "@ad7998.proto rCtrl($(ID)) I2C" )
 }
 
-record( mbbiDirect, "AD7998:$(ID):RESULT" ) {
+record( longin, "AD7998:$(ID):RESULT" ) {
   field( DTYP, "stream" )
   field( INP,  "@ad7998.proto rConv($(ID)) I2C" )
 }

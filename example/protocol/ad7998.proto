@@ -3,7 +3,7 @@ LockTimeout  = 500;
 ReplyTimeout = 100;
 ReadTimeout  = 100;
 WriteTimeout = 100;
-MaxInput     = 2;
+MaxInput     = 3;
 ExtraInput   = Error;
 
 wCtrl {
@@ -12,11 +12,11 @@ wCtrl {
 
 rCtrl {
   out ${1} 2; 
-  in  "%02r";
+  in  "%*01r%02r";
 }
 
 rConv {
   out ${1} 1;
-  in  "%02r";
+  in  "%*01r%02r";
 }
 
