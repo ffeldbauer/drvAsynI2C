@@ -37,12 +37,8 @@ The directory `example` contains a small IOC controlling an AD7998 ADC via strea
  be found on [github](https://github.com/ffeldbauer/epics-devgpio) )
 
 ## Known Issues
-   - With streamDevice 2.6 downloaded from the PSI webpage this module enters an endless loop.
-     Use the release 2.6c from [github](https://github.com/epics-modules/stream)
-   - There is a problem using StreamDevice with slave devices using 16-bit registers.
-     Each read-access on the kernel module sends the slave address on the bus with the R/!W bit set
-     and reading n bytes back.
-     The max length for the first read call inside the readHandler method of streamDevice is hardcoded to 1,
-     so a possible second byte is lost.
-     A possible workaround is setting the `MaxInput = 3;` and reading `in "%*01r%02r";`.
+   - Using StreamDevice is currently not working!!! As soon as a valid slave address is set
+     each write command from StreamDevice generates an endless loop!
+     The reason is, that line [AsynDriverInterface.cc:631](https://github.com/epics-modules/stream/blob/master/streamDevice/src/AsynDriverInterface.cc#L631)
+     will always return asynSuccess, when the configured slave address is valid.
     
