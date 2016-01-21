@@ -61,6 +61,21 @@
 //------------------------------------------------------------------------------
 //! @brief       Called when asyn clients call pasynOctet->read().
 //! @param [in]  pasynUser  pasynUser structure that encodes the reason and address.
+//! @return      asynSuccess
+//!
+//! Flushing makes no sense for I2C bus, since the kernel module is not buffering
+//! any messages.
+//! Each read call would start a new communication with the slave device und
+//! thus would always return a new message.
+//! Therefore this function simply returns asynSuccess without doing anything.
+//------------------------------------------------------------------------------
+asynStatus drvAsynI2C::flushOctet( asynUser *pasynUser ) {
+  return asynSuccess;
+}
+
+//------------------------------------------------------------------------------
+//! @brief       Called when asyn clients call pasynOctet->read().
+//! @param [in]  pasynUser  pasynUser structure that encodes the reason and address.
 //! @param [out] value      Address of the string to read.
 //! @param [in]  maxChars   Maximum number of characters to read.
 //! @param [out] nActual    Number of characters actually read.
@@ -74,9 +89,22 @@
 //! To set the correct slave address the pasynOctet->write() call has to be used.
 //! If the slave has multiple registers, use the write call to setup slave
 //! address and register address, followed by this read call.
-///------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 asynStatus drvAsynI2C::readOctet( asynUser *pasynUser, char *value, size_t maxChars,
                                   size_t *nActual, int *eomReason ) {
+
+#ifdef STREAM_WORKAROUND
+  // the writeHandler method of StreamDevice tries to read 256 bytes on the bus
+  // until asynTimeout (or asynError) is returned.
+  // But after having set up a valid slave address each read access will
+  // produce valid data, so StreamDevice will end up in an endless loop
+  // never reaching its break condition.
+  //
+  // This workaround simply returns asynTimeout on read requests with 256 byte length.
+  // Such long messages should not have any use case on I2C busses.
+  if( 256 == maxChars ) return asynTimeout;
+#endif
+
   if( _fd < 0 ) {
     epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize,
                    "%s: %s disconnected:", portName, _deviceName );
@@ -305,7 +333,7 @@ asynStatus drvAsynI2C::connect( asynUser *pasynUser ) {
 asynStatus drvAsynI2C::disconnect( asynUser *pasynUser ) {
   asynPrint( pasynUser, ASYN_TRACEIO_DRIVER,
              "%s: disconnect %s\n", portName, _deviceName );
-  if( _fd >= 0 ) {
+  if( 0 <= _fd ) {
     close( _fd );
     _fd = -1;
     pasynManager->exceptionDisconnect(pasynUser);
@@ -319,21 +347,22 @@ asynStatus drvAsynI2C::disconnect( asynUser *pasynUser ) {
 //! @param [in]  ttyName      The name of the device
 //! @param [in]  autoConnect  ...
 //------------------------------------------------------------------------------
-drvAsynI2C::drvAsynI2C( const char *portName, const char *ttyName, int autoConnect ) 
-  : asynPortDriver( portName,
-                    0, // maxAddr
-                    0, // paramTableSize
-                    asynCommonMask | asynOctetMask | asynDrvUserMask, // Interface mask
-                    asynCommonMask | asynOctetMask,  // Interrupt mask
-                    ASYN_CANBLOCK, // asynFlags
-                    autoConnect,  // Autoconnect
-                    0,  // Default priority
-                    0 ) // Default stack size
+drvAsynI2C::drvAsynI2C( const char *portName, const char *ttyName, int autoConnect ) :
+  asynPortDriver( portName,
+                  0, // maxAddr
+                  0, // paramTableSize
+                  asynCommonMask | asynOctetMask | asynDrvUserMask, // Interface mask
+                  asynCommonMask | asynOctetMask,  // Interrupt mask
+                  ASYN_CANBLOCK, // asynFlags
+                  autoConnect,  // Autoconnect
+                  0,  // Default priority
+                  0 ), // Default stack size
+  _fd( -1 ),
+  _i2cfuncs( 0 ),
+  _slaveAddress( 0 )
 {
   asynStatus status;
   _deviceName = epicsStrDup( ttyName );
-  _fd = -1;
-  _slaveAddress = 0;
 
   if( autoConnect ) {
     // If autoConnect is true then asynPortDriver::connect will have been called by the asynPortDriver

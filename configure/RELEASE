@@ -21,12 +21,16 @@
 
 TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
 
-# If using the sequencer, point SNCSEQ at its top directory:
-#SNCSEQ=$(EPICS_BASE)/../modules/soft/seq
+## Using this driver in combination with streamDevice
+## requires a workaround forbidding read queries with
+## a max length of 256 byte. To compile the driver with
+## with workaround enabled, uncomment the following line
+#STREAM_WORKAROUND = 1
 
 # EPICS_BASE usually appears last so other apps can override stuff:
 EPICS_BASE = /etc/epics/base
 ASYN       = /etc/epics/asyn
+
 # Set RULES here if you want to take build rules from somewhere
 # other than EPICS_BASE:
 #RULES=/path/to/epics/support/module/rules/x-y

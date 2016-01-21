@@ -10,8 +10,13 @@ include $(TOP)/configure/CONFIG
 
 LIBRARY_IOC += drvAsynI2C
 
+ifdef STREAM_WORKAROUND
+USR_CXXFLAGS += -DSTREAM_WORKAROUND
+endif
+
 # xxxRecord.h will be created from xxxRecord.dbd
 #DBDINC += xxxRecord
+
 # install drvAsynI2C.dbd into <top>/dbd
 DBD += drvAsynI2C.dbd
 

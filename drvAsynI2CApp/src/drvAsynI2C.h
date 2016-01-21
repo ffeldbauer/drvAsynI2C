@@ -42,6 +42,7 @@ class drvAsynI2C : public asynPortDriver {
   drvAsynI2C( const char *portName, const char *ttyName, int autoConnect );
 
   // These are the methods that we override from asynPortDriver
+  virtual asynStatus flushOctet( asynUser *pasynUser );
   virtual asynStatus readOctet( asynUser *pasynUser, char *value, size_t maxChars,
                                 size_t *nActual, int *eomReason );
   virtual asynStatus writeOctet( asynUser *pasynUser, char const *value, size_t maxChars,
@@ -55,10 +56,10 @@ class drvAsynI2C : public asynPortDriver {
  private:
 
   // Our data
-  char* _deviceName;
   int   _fd;
   unsigned long  _i2cfuncs;
   int   _slaveAddress;
+  char* _deviceName;
     
 };
 
