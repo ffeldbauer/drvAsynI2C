@@ -48,6 +48,7 @@
 #include <iocsh.h>
 
 // local includes
+#include "asynI2C.h"
 #include "drvAsynI2C.h"
 
 //_____ D E F I N I T I O N S __________________________________________________
@@ -55,6 +56,8 @@
 //_____ G L O B A L S __________________________________________________________
 
 //_____ L O C A L S ____________________________________________________________
+static asynI2C i2cDummy = {};
+epicsShareDef asynI2C *pasynI2C = &i2cDummy;
 
 //_____ F U N C T I O N S ______________________________________________________
 
@@ -363,6 +366,16 @@ drvAsynI2C::drvAsynI2C( const char *portName, const char *ttyName, int autoConne
 {
   asynStatus status;
   _deviceName = epicsStrDup( ttyName );
+
+  // Register I2C interface
+  i2c.interfaceType = asynI2cType;
+  i2c.pinterface = pasynI2C;
+  i2c.drvPvt = this;
+  status = pasynManager->registerInterface( portName, &i2c );
+  if( status ) {
+    asynPrint( pasynUserSelf, ASYN_TRACE_ERROR,
+               "drvAsynI2C::drvAsynI2C, error registering I2C interface\n" );
+  }
 
   if( autoConnect ) {
     // If autoConnect is true then asynPortDriver::connect will have been called by the asynPortDriver

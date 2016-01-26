@@ -21,50 +21,30 @@
 // version 1.0.0; Nov. 17, 2015
 //******************************************************************************
 
-#ifndef __DRV_ASYN_I2C_H__
-#define __DRV_ASYN_I2C_H__
+#ifndef __ASYN_I2C_H__
+#define __ASYN_I2C_H__
 
 //_____ I N C L U D E S _______________________________________________________
 
 // ANSI C includes
 
 // EPICS includes
-#include <asynDriver.h>
-#include <asynPortDriver.h>
+#include <shareLib.h>
 
 // local includes
 
 //_____ D E F I N I T I O N S __________________________________________________
 
-//! @brief   asynPortDriver for I2C
-//!
-class drvAsynI2C : public asynPortDriver {
- public:
-  drvAsynI2C( const char *portName, const char *ttyName, int autoConnect );
+#define asynI2cType "asynI2C"
 
-  // These are the methods that we override from asynPortDriver
-  virtual asynStatus flushOctet( asynUser *pasynUser );
-  virtual asynStatus readOctet( asynUser *pasynUser, char *value, size_t maxChars,
-                                size_t *nActual, int *eomReason );
-  virtual asynStatus writeOctet( asynUser *pasynUser, char const *value, size_t maxChars,
-                                 size_t *nActual );
-//  virtual asynStatus readOption( asynUser *pasynUser, char const *key, char *value, int maxChars );
-//  virtual asynStatus writeOption( asynUser *pasynUser, char const *key, char const *value );
-
-  virtual asynStatus connect( asynUser *pasynUser );
-  virtual asynStatus disconnect( asynUser *pasynUser );
-
- private:
-
-  // Our data
-  int   _fd;
-  unsigned long  _i2cfuncs;
-  int   _slaveAddress;
-  char* _deviceName;
-  asynInterface i2c;
-    
+// define asynI2C interface
+typedef struct asynI2C asynI2C;
+struct asynI2C {
+  // no methods needed for this interface.
+  // it's just used to change the behaviour
+  // of streamDevice when accessing the
+  // asynOctet interface...
 };
-
+epicsShareExtern asynI2C *pasynI2C;
 
 #endif
-

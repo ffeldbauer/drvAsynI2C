@@ -1,0 +1,38 @@
+From b30a347de6e408da53b1e1a2284620c626fdbb1f Mon Sep 17 00:00:00 2001
+From: Florian Feldbauer <feldbaue@kph.uni-mainz.de>
+Date: Tue, 26 Jan 2016 17:30:57 +0100
+Subject: [PATCH] Added asynI2C interface
+
+---
+ configure/RELEASE                       | 1 +
+ streamDevice/src/AsynDriverInterface.cc | 2 +-
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/configure/RELEASE b/configure/RELEASE
+index 0778dfc..3fb2f70 100644
+--- a/configure/RELEASE
++++ b/configure/RELEASE
+@@ -14,6 +14,7 @@ SUPPORT=/corvette/home/epics/devel
+ ASYN=$(SUPPORT)/asyn-4-21
+ CALC=$(SUPPORT)/calc-3-0
+ SSCAN=$(SUPPORT)/sscan-2-8-1
++DRVASYNI2C=$(SUPPORT)/drvAsynI2c
+ 
+ # EPICS_BASE usually appears last so other apps can override stuff:
+ EPICS_BASE=/corvette/usr/local/epics/base-3.14.12.3
+diff --git a/streamDevice/src/AsynDriverInterface.cc b/streamDevice/src/AsynDriverInterface.cc
+index 1fcafea..ed9c87a 100644
+--- a/streamDevice/src/AsynDriverInterface.cc
++++ b/streamDevice/src/AsynDriverInterface.cc
+@@ -418,7 +418,7 @@ connectToBus(const char* busname, int addr)
+     }
+ 
+     // is it a I2C interface ?
+-    pasynInterface = pasynManager->findInterface( pasynUser, asynI2CType, true );
++    pasynInterface = pasynManager->findInterface( pasynUser, asynI2cType, true );
+     if( pasynInterface ) {
+       pasynI2C = static_cast<asynI2C*>(pasynInterface->pinterface);
+       // I2C does not support peeking
+-- 
+2.5.0
+

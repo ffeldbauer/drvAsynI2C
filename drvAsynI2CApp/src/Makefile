@@ -14,6 +14,8 @@ ifdef STREAM_WORKAROUND
 USR_CXXFLAGS += -DSTREAM_WORKAROUND
 endif
 
+INC += asynI2C.h
+
 # xxxRecord.h will be created from xxxRecord.dbd
 #DBDINC += xxxRecord
 
