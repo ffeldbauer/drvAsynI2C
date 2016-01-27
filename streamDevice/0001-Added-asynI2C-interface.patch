@@ -1,12 +1,12 @@
-From b30a347de6e408da53b1e1a2284620c626fdbb1f Mon Sep 17 00:00:00 2001
+From b852a5da658aecee435e162d67efb059182fc8d0 Mon Sep 17 00:00:00 2001
 From: Florian Feldbauer <feldbaue@kph.uni-mainz.de>
-Date: Tue, 26 Jan 2016 17:30:57 +0100
-Subject: [PATCH] Added asynI2C interface
+Date: Tue, 26 Jan 2016 17:07:35 +0100
+Subject: [PATCH] asynI2C interface
 
 ---
- configure/RELEASE                       | 1 +
- streamDevice/src/AsynDriverInterface.cc | 2 +-
- 2 files changed, 2 insertions(+), 1 deletion(-)
+ configure/RELEASE                       |  1 +
+ streamDevice/src/AsynDriverInterface.cc | 13 ++++++++++++-
+ 2 files changed, 13 insertions(+), 1 deletion(-)
 
 diff --git a/configure/RELEASE b/configure/RELEASE
 index 0778dfc..3fb2f70 100644
@@ -21,18 +21,57 @@ index 0778dfc..3fb2f70 100644
  # EPICS_BASE usually appears last so other apps can override stuff:
  EPICS_BASE=/corvette/usr/local/epics/base-3.14.12.3
 diff --git a/streamDevice/src/AsynDriverInterface.cc b/streamDevice/src/AsynDriverInterface.cc
-index 1fcafea..ed9c87a 100644
+index 1ae3e7f..ed9c87a 100644
 --- a/streamDevice/src/AsynDriverInterface.cc
 +++ b/streamDevice/src/AsynDriverInterface.cc
-@@ -418,7 +418,7 @@ connectToBus(const char* busname, int addr)
+@@ -45,6 +45,7 @@ extern "C" {
+ #include <asynInt32.h>
+ #include <asynUInt32Digital.h>
+ #include <asynGpibDriver.h>
++#include <asynI2C.h>
+ 
+ /* How things are implemented:
+ 
+@@ -156,6 +157,7 @@ class AsynDriverInterface : StreamBusInterface
+     void* pvtUInt32;
+     void* intrPvtUInt32;
+     asynGpib* pasynGpib;
++    asynI2C* pasynI2C;
+     void* pvtGpib;
+     IoAction ioAction;
+     double lockTimeout;
+@@ -263,6 +265,7 @@ AsynDriverInterface(Client* client) : StreamBusInterface(client)
+     pasynUInt32 = NULL;
+     intrPvtUInt32 = NULL;
+     pasynGpib = NULL;
++    pasynI2C = NULL;
+     eventMask = 0;
+     receivedEvent = 0;
+     peeksize = 1;
+@@ -414,6 +417,14 @@ connectToBus(const char* busname, int addr)
+         peeksize = inputBuffer.capacity();
      }
  
-     // is it a I2C interface ?
--    pasynInterface = pasynManager->findInterface( pasynUser, asynI2CType, true );
++    // is it a I2C interface ?
 +    pasynInterface = pasynManager->findInterface( pasynUser, asynI2cType, true );
-     if( pasynInterface ) {
-       pasynI2C = static_cast<asynI2C*>(pasynInterface->pinterface);
-       // I2C does not support peeking
++    if( pasynInterface ) {
++      pasynI2C = static_cast<asynI2C*>(pasynInterface->pinterface);
++      // I2C does not support peeking
++      peeksize = inputBuffer.capacity();
++    }
++
+     // look for interfaces for events
+     pasynInterface = pasynManager->findInterface(pasynUser,
+         asynInt32Type, true);
+@@ -619,7 +630,7 @@ writeHandler()
+     size_t written = 0;
+ 
+     pasynUser->timeout = 0;
+-    if (pasynGpib)
++    if( pasynGpib || pasynI2C )
+          pasynOctet->flush(pvtOctet, pasynUser);
+     else
+     // discard any early input, but forward it to potential async records
 -- 
 2.5.0
 
