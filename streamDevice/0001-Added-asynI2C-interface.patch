@@ -16,7 +16,7 @@ index 0778dfc..3fb2f70 100644
  ASYN=$(SUPPORT)/asyn-4-21
  CALC=$(SUPPORT)/calc-3-0
  SSCAN=$(SUPPORT)/sscan-2-8-1
-+DRVASYNI2C=$(SUPPORT)/drvAsynI2c
++DRVASYNI2C=$(SUPPORT)/drvAsynI2C
  
  # EPICS_BASE usually appears last so other apps can override stuff:
  EPICS_BASE=/corvette/usr/local/epics/base-3.14.12.3

@@ -1,9 +1,55 @@
+#######################################################
+# ###                                             ### #
+# ### EPICS Database for                          ### #
+# ### AD7998 test board                           ### #
+# ###                                             ### #
+# ### author: F.Feldbauer                         ### #
+# ###                                             ### #
+# ### Ref 2.0; 2016-06-28                         ### #
+# ###                                             ### #
+# ### macros: ID      I2C address of ADC          ### #
+# ###         CONVST  name of GPIO used as CONVST ### #
+# ###         BUSY    name of GPIO used as BUSY   ### #
+# ###                                             ### #
+# ### Description:                                ### #
+# ### This is an example DB file using            ### #
+# ### stream(asynI2C) and devgpio to readout an   ### #
+# ### AD7998 ADC. The Conversion result is        ### #
+# ### automatically read out on high to low       ### #
+# ### transition of the BUSY flag.                ### #
+# ###                                             ### #
+# ### Records ending in "__" are for internal use ### #
+# ### only! Do not set them manually              ### #
+# ###                                             ### #
+#######################################################
+
+#######################################
+# ### Read/Write control register ### #
+#######################################
+#record( mbboDirect, "AD7998:$(ID):CTRLREGISTER" ) {
+record( longout, "AD7998:$(ID):CTRLREGISTER" ) {
+  field( DTYP, "stream" )
+  field( OUT,  "@ad7998.proto wCtrl($(ID)) I2C" )
+  field( DRVH, "4095" )
+  field( DRVL, "0" )
+#field( NOBT, "12" )
+#field( SHFT, "0" )
+}
+
+record( mbbiDirect, "AD7998:$(ID):CTRLREGISTER:READ" ) {
+  field( DTYP, "stream" )
+  field( INP,  "@ad7998.proto rCtrl($(ID)) I2C" )
+}
+
+#######################################################
+# ### Start Conversion via CONVST signal (mode 1) ### #
+#######################################################
 record( seq,"AD7998:$(ID):CONVST" ) { 
   field( SELM, "All")
-  field( LNK1, "AD7998:$(ID):CONVST__.VAL" )
+  field( LNK1, "AD7998:$(ID):CONVST__.VAL PP" )
   field( DOL1, "1" )
   field( DLY1, "0" )
-  field( LNK2, "AD7998:$(ID):CONVST__.VAL" )
+  field( LNK2, "AD7998:$(ID):CONVST__.VAL PP" )
   field( DOL2, "0" )
   field( DLY2, "0.000002" ) # 2 us
 }
@@ -15,26 +61,129 @@ record( bo, "AD7998:$(ID):CONVST__" ) {
   field( ONAM, "Start conversion" )
 }
 
+###################################
+# ### Read Conversion results ### #
+###################################
 record( bi, "AD7998:$(ID):BUSY" ) {
   field( DTYP, "devgpio" )
   field( SCAN, "I/O Intr" )
   field( INP,  "@$(BUSY) L" )
   field( ZNAM, "IDLE" )
   field( ONAM, "BUSY" )
+  field( FLNK, "AD7998:$(ID):CONVERSION:READ__" )
 }
 
-record( mbboDirect, "AD7998:$(ID):CTRLREGISTER" ) {
+record( longin, "AD7998:$(ID):CONVERSION:RESULT__" ) {
   field( DTYP, "stream" )
-  field( OUT,  "@ad7998.proto wCtrl($(ID)) I2C" )
-}
-
-record( mbbiDirect, "AD7998:$(ID):CTRLREGISTER:READ" ) {
-  field( DTYP, "stream" )
-  field( INP,  "@ad7998.proto rCtrl($(ID)) I2C" )
-}
-
-record( longin, "AD7998:$(ID):RESULT" ) {
-  field( DTYP, "stream" )
+  field( DISV, "1" )
+  field( SDIS, "AD7998:$(ID):BUSY NPP NMS" )
   field( INP,  "@ad7998.proto rConv($(ID)) I2C" )
+  field( FLNK, "AD7998:$(ID):CONVERSION:RESULT:SPLIT__" )
+}
+
+record( calc, "AD7998:$(ID):CONVERSION:RESULT:SPLIT__" ) {
+  field( INPA, "AD7998:$(ID):CONVERSION:RESULT__ NPP NMS" )
+  field( CALC, "b := (( A & 32768 ) >> 15 ); c := (( A & 28672 ) >> 12 ) + 1; ( A & 4095 )" )
+  field( FLNK, "AD7998:$(ID):CONVERSION:ALERT" )
+}
+
+record( longin, "AD7998:$(ID):CONVERSION:ALERT" ) {
+  field( INP, "AD7998:$(ID):CONVERSION:RESULT:SPLIT__.B NPP NMS" )
+  field( HIHI, "1" )
+  field( HHSV, "MAJOR" )
+  field( HSV,  "NO_ALARM" )
+  field( LSV,  "NO_ALARM" )
+  field( LLSV, "NO_ALARM" )
+  field( FLNK, "AD7998:$(ID):CONVERSION:FANOUT__" )
+}
+
+record( dfanout, "AD7998:$(ID):CONVERSION:FANOUT__" ) {
+  field( OMSL, "closed_loop")
+  field( DOL,  "AD7998:$(ID):CONVERSION:RESULT:SPLIT__ NPP NMS")
+
+  field( SELM, "Specified" )
+  field( SELL, "AD7998:$(ID):CONVERSION:RESULT:SPLIT__.C NPP NMS" )
+
+  field( OUTA, "AD7998:$(ID):CHANNEL:1" )
+  field( OUTB, "AD7998:$(ID):CHANNEL:2" )
+  field( OUTC, "AD7998:$(ID):CHANNEL:3" )
+  field( OUTD, "AD7998:$(ID):CHANNEL:4" )
+  field( OUTE, "AD7998:$(ID):CHANNEL:5" )
+  field( OUTF, "AD7998:$(ID):CHANNEL:6" )
+  field( OUTG, "AD7998:$(ID):CHANNEL:7" )
+  field( OUTH, "AD7998:$(ID):CHANNEL:8" )
+}
+
+record( ai, "AD7998:$(ID):CHANNEL:1" ) {
+  field( DTYP, "Raw Soft Channel" )
+  field( ASLO, "0.61" )
+  field( AOFF, "0" )
+  field( EGU,  "mV" )
+  field( PREC, "2" )
+  field( HOPR, "2500" )
+  field( LOPR, "0" )
+}
+record( ai, "AD7998:$(ID):CHANNEL:2" ) {
+  field( DTYP, "Raw Soft Channel" )
+  field( ASLO, "0.61" )
+  field( AOFF, "0" )
+  field( EGU,  "mV" )
+  field( PREC, "2" )
+  field( HOPR, "2500" )
+  field( LOPR, "0" )
+}
+record( ai, "AD7998:$(ID):CHANNEL:3" ) {
+  field( DTYP, "Raw Soft Channel" )
+  field( ASLO, "0.61" )
+  field( AOFF, "0" )
+  field( EGU,  "mV" )
+  field( PREC, "2" )
+  field( HOPR, "2500" )
+  field( LOPR, "0" )
+}
+record( ai, "AD7998:$(ID):CHANNEL:4" ) {
+  field( DTYP, "Raw Soft Channel" )
+  field( ASLO, "0.61" )
+  field( AOFF, "0" )
+  field( EGU,  "mV" )
+  field( PREC, "2" )
+  field( HOPR, "2500" )
+  field( LOPR, "0" )
+}
+record( ai, "AD7998:$(ID):CHANNEL:5" ) {
+  field( DTYP, "Raw Soft Channel" )
+  field( ASLO, "0.61" )
+  field( AOFF, "0" )
+  field( EGU,  "mV" )
+  field( PREC, "2" )
+  field( HOPR, "2500" )
+  field( LOPR, "0" )
+}
+record( ai, "AD7998:$(ID):CHANNEL:6" ) {
+  field( DTYP, "Raw Soft Channel" )
+  field( ASLO, "0.61" )
+  field( AOFF, "0" )
+  field( EGU,  "mV" )
+  field( PREC, "2" )
+  field( HOPR, "2500" )
+  field( LOPR, "0" )
+}
+record( ai, "AD7998:$(ID):CHANNEL:7" ) {
+  field( DTYP, "Raw Soft Channel" )
+  field( ASLO, "0.61" )
+  field( AOFF, "0" )
+  field( EGU,  "mV" )
+  field( PREC, "2" )
+  field( HOPR, "2500" )
+  field( LOPR, "0" )
+}
+record( ai, "AD7998:$(ID):CHANNEL:8" ) {
+  field( DTYP, "Raw Soft Channel" )
+  field( ASLO, "0.61" )
+  field( AOFF, "0" )
+  field( EGU,  "mV" )
+  field( PREC, "2" )
+  field( HOPR, "2500" )
+  field( LOPR, "0" )
 }
 

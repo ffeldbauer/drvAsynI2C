@@ -7,7 +7,7 @@ MaxInput     = 2;
 ExtraInput   = Error;
 
 wCtrl {
-  out ${1} 2 "%02r"; 
+  out ${1} 2 "%.2r"; 
 }
 
 rCtrl {
