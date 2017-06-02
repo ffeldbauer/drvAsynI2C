@@ -1,30 +1,22 @@
-From b852a5da658aecee435e162d67efb059182fc8d0 Mon Sep 17 00:00:00 2001
+From 0be91c7ac9717b55f06be82a1da9ce477570d5e2 Mon Sep 17 00:00:00 2001
 From: Florian Feldbauer <feldbaue@kph.uni-mainz.de>
-Date: Tue, 26 Jan 2016 17:07:35 +0100
-Subject: [PATCH] asynI2C interface
+Date: Wed, 5 Apr 2017 10:31:20 +0200
+Subject: [PATCH] Added asynI2C interface
 
+Added asynI2C interface to AsynInterface.cc
+to disable peeking when reading and
+call asynOctet->flush instead of read( ..., 256, ...)
 ---
+ StreamDevice/src/AsynDriverInterface.cc | 14 +++++++++++++-
+ StreamDevice/streamApp/Makefile         |  4 ++++
  configure/RELEASE                       |  1 +
- streamDevice/src/AsynDriverInterface.cc | 13 ++++++++++++-
- 2 files changed, 13 insertions(+), 1 deletion(-)
+ 3 files changed, 18 insertions(+), 1 deletion(-)
 
-diff --git a/configure/RELEASE b/configure/RELEASE
-index 0778dfc..3fb2f70 100644
---- a/configure/RELEASE
-+++ b/configure/RELEASE
-@@ -14,6 +14,7 @@ SUPPORT=/corvette/home/epics/devel
- ASYN=$(SUPPORT)/asyn-4-21
- CALC=$(SUPPORT)/calc-3-0
- SSCAN=$(SUPPORT)/sscan-2-8-1
-+DRVASYNI2C=$(SUPPORT)/drvAsynI2C
- 
- # EPICS_BASE usually appears last so other apps can override stuff:
- EPICS_BASE=/corvette/usr/local/epics/base-3.14.12.3
-diff --git a/streamDevice/src/AsynDriverInterface.cc b/streamDevice/src/AsynDriverInterface.cc
-index 1ae3e7f..ed9c87a 100644
---- a/streamDevice/src/AsynDriverInterface.cc
-+++ b/streamDevice/src/AsynDriverInterface.cc
-@@ -45,6 +45,7 @@ extern "C" {
+diff --git a/StreamDevice/src/AsynDriverInterface.cc b/StreamDevice/src/AsynDriverInterface.cc
+index 0268ece..f670ff6 100644
+--- a/StreamDevice/src/AsynDriverInterface.cc
++++ b/StreamDevice/src/AsynDriverInterface.cc
+@@ -40,6 +40,7 @@ extern "C" {
  #include <asynInt32.h>
  #include <asynUInt32Digital.h>
  #include <asynGpibDriver.h>
@@ -32,7 +24,7 @@ index 1ae3e7f..ed9c87a 100644
  
  /* How things are implemented:
  
-@@ -156,6 +157,7 @@ class AsynDriverInterface : StreamBusInterface
+@@ -151,6 +152,7 @@ class AsynDriverInterface : StreamBusInterface
      void* pvtUInt32;
      void* intrPvtUInt32;
      asynGpib* pasynGpib;
@@ -40,7 +32,7 @@ index 1ae3e7f..ed9c87a 100644
      void* pvtGpib;
      IoAction ioAction;
      double lockTimeout;
-@@ -263,6 +265,7 @@ AsynDriverInterface(Client* client) : StreamBusInterface(client)
+@@ -259,6 +261,7 @@ AsynDriverInterface(Client* client) : StreamBusInterface(client)
      pasynUInt32 = NULL;
      intrPvtUInt32 = NULL;
      pasynGpib = NULL;
@@ -48,10 +40,11 @@ index 1ae3e7f..ed9c87a 100644
      eventMask = 0;
      receivedEvent = 0;
      peeksize = 1;
-@@ -414,6 +417,14 @@ connectToBus(const char* busname, int addr)
+@@ -487,6 +490,15 @@ connectToBus(const char* portname, int addr)
+         // (read only one byte first).
          peeksize = inputBuffer.capacity();
      }
- 
++
 +    // is it a I2C interface ?
 +    pasynInterface = pasynManager->findInterface( pasynUser, asynI2cType, true );
 +    if( pasynInterface ) {
@@ -60,18 +53,45 @@ index 1ae3e7f..ed9c87a 100644
 +      peeksize = inputBuffer.capacity();
 +    }
 +
-     // look for interfaces for events
-     pasynInterface = pasynManager->findInterface(pasynUser,
-         asynInt32Type, true);
-@@ -619,7 +630,7 @@ writeHandler()
+     return true;
+ }
+ 
+@@ -666,7 +678,7 @@ writeHandler()
      size_t written = 0;
  
      pasynUser->timeout = 0;
--    if (pasynGpib)
-+    if( pasynGpib || pasynI2C )
-          pasynOctet->flush(pvtOctet, pasynUser);
-     else
+-    if (!pasynGpib)
++    if (!pasynGpib && !pasynI2C )
      // discard any early input, but forward it to potential async records
+     // thus do not use pasynOctet->flush()
+     // unfortunately we cannot do this with GPIB because addressing a device as talker
+diff --git a/StreamDevice/streamApp/Makefile b/StreamDevice/streamApp/Makefile
+index 1981c42..3a0a655 100644
+--- a/StreamDevice/streamApp/Makefile
++++ b/StreamDevice/streamApp/Makefile
+@@ -48,6 +48,10 @@ PROD_LIBS += calc
+ PROD_LIBS_DEFAULT += streamSynApps
+ endif
+ 
++ifdef DRVASYNI2C
++PROD_LIBS += drvAsynI2C
++endif
++
+ streamApp_DBD += stream.dbd
+ 
+ ifdef PCRE
+diff --git a/configure/RELEASE b/configure/RELEASE
+index bee74c1..b95de67 100644
+--- a/configure/RELEASE
++++ b/configure/RELEASE
+@@ -14,6 +14,7 @@ SUPPORT=/etc/epics
+ ASYN=$(SUPPORT)/asyn-4-21
+ CALC=$(SUPPORT)/calc-3-0
+ SSCAN=$(SUPPORT)/sscan-2-8-1
++DRVASYNI2C=$(SUPPORT)/drvAsynI2C
+ 
+ # EPICS_BASE usually appears last so other apps can override stuff:
+ EPICS_BASE=/corvette/usr/local/epics/base-3.14.12.3
 -- 
-2.5.0
+2.1.4
 
