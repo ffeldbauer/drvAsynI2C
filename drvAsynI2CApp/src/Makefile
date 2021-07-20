@@ -16,9 +16,6 @@ endif
 
 INC += asynI2C.h
 
-# xxxRecord.h will be created from xxxRecord.dbd
-#DBDINC += xxxRecord
-
 # install drvAsynI2C.dbd into <top>/dbd
 DBD += drvAsynI2C.dbd
 

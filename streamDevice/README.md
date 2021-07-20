@@ -6,15 +6,16 @@ Use the `%r` format converter to send/read data from the bus und set `MaxInput`
 to the number of bytes you expect from the device.
 
 Example:
+```
+Terminator   = '';
+MaxInput     = 2;
+ExtraInput   = Error;
 
->     Terminator   = '';
->     MaxInput     = 2;
->     ExtraInput   = Error;
->     
->     rCtrl {
->       out ${1} 2; 
->       in  "%02r";
->     }
+rCtrl {
+  out ${1} 2;
+  in  "%02r";
+}
+```
 
 ## Known problems with StreamDevice
 Using this driver in combination with StreamDevice is unfortunately not that easy.
@@ -31,11 +32,10 @@ a maximum length of one byte. That means for devices with 16-bit registers Strea
 read two times the first byte if setting `MaxInput = 2`.
 
 ## Solution
-To overcome these two problems, this package implements a new asyn interface "asynI2C".
+To overcome these two problems, this package implements a new asyn interface `asynI2C`.
 The interface is registered by the drvAsynI2C-driver class. It has no methods, since none
 are needed. It is only used to change the default behaviour of streamDevice.
 
-The patch file in this directory can be used to make the new interface known to streamDevice.
-It is recommended to use the StreamDevice version from
-[github](https://github.com/epics-modules/stream)
+The patch files in this directory can be used to make the new interface known to certain
+version of [StreamDevice](https://github.com/paulscherrerinstitute/StreamDevice)
 

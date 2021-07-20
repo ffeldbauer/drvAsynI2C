@@ -17,9 +17,9 @@ This module provides EPICS device support for accessing I2C bus.
 
 ### Loading the driver
 To load the driver use the command inside the IOC
-
->     drvAsynI2CConfigure( "NAME", "I2Cbus", autoConnect )
-
+```
+drvAsynI2CConfigure( "NAME", "I2Cbus", autoConnect )
+```
 where `NAME` is the name used by asyn to identify the driver,
 `I2Cbus` is the name of the I2C device on the filesystem
 and `autoConnect` is a flag whether the driver should automatically
@@ -37,8 +37,8 @@ The directory `example` contains a small IOC controlling an AD7998 ADC via strea
  be found on [github](https://github.com/ffeldbauer/epics-devgpio) )
 
 ### Using StreamDevice
-Refer to the readme inside the direcotry "streamDevice"
+Refer to the readme inside the directory "streamDevice"
 
 ## Known Issues
-   - none    
+   - none
 

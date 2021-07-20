@@ -1,0 +1,93 @@
+From 501d6c448aea33cc1944e65587b06228a8a28c69 Mon Sep 17 00:00:00 2001
+From: Florian Feldbauer <florian@ep1.ruhr-uni-bochum.de>
+Date: Tue, 20 Jul 2021 11:35:16 +0200
+Subject: [PATCH] Include patch for drvAsynI2C
+
+Included optional changes in AsynDriverInterface
+needed by drvAsynI2C
+---
+ src/AsynDriverInterface.cc | 23 +++++++++++++++++++++++
+ streamApp/Makefile         |  4 ++++
+ 2 files changed, 27 insertions(+)
+
+diff --git a/src/AsynDriverInterface.cc b/src/AsynDriverInterface.cc
+index 312324b..3531e45 100644
+--- a/src/AsynDriverInterface.cc
++++ b/src/AsynDriverInterface.cc
+@@ -39,6 +39,9 @@ extern "C" {
+ #include "asynInt32.h"
+ #include "asynUInt32Digital.h"
+ #include "asynGpibDriver.h"
++#ifdef DRVASYNI2C
++#  include "asynI2C.h"
++#endif
+ 
+ #include "StreamBusInterface.h"
+ #include "StreamError.h"
+@@ -156,6 +159,9 @@ class AsynDriverInterface : StreamBusInterface
+     void* pvtUInt32;
+     void* intrPvtUInt32;
+     asynGpib* pasynGpib;
++#ifdef DRVASYNI2C
++    asynI2C* pasynI2C;
++#endif
+     void* pvtGpib;
+     int connected;
+     IoAction ioAction;
+@@ -291,6 +297,9 @@ AsynDriverInterface(Client* client) : StreamBusInterface(client)
+     pasynUInt32 = NULL;
+     intrPvtUInt32 = NULL;
+     pasynGpib = NULL;
++#ifdef DRVASYNI2C
++    pasynI2C = NULL;
++#endif
+     connected = 0;
+     eventMask = 0;
+     receivedEvent = 0;
+@@ -511,6 +520,16 @@ connectToBus(const char* portname, int addr)
+         peeksize = inputBuffer.capacity();
+     }
+ 
++#ifdef DRVASYNI2C
++    // is it a I2C interface ?
++    pasynInterface = pasynManager->findInterface( pasynUser, asynI2cType, true );
++    if( pasynInterface ) {
++      pasynI2C = static_cast<asynI2C*>(pasynInterface->pinterface);
++      // I2C does not support peeking
++      peeksize = inputBuffer.capacity();
++    }
++#endif
++
+     // Install callback for connect/disconnect events
+     status = pasynManager->exceptionCallbackAdd(pasynUser, exceptionHandler);
+     if (status != asynSuccess)
+@@ -652,7 +671,11 @@ writeHandler()
+     size_t written = 0;
+ 
+     pasynUser->timeout = 0;
++#ifdef DRVASYNI2C
++    if (!pasynGpib && !pasynI2C)
++#else
+     if (!pasynGpib)
++#endif
+     {
+         // discard any early input, but forward it to potential async records
+         // thus do not use pasynOctet->flush()
+diff --git a/streamApp/Makefile b/streamApp/Makefile
+index 2dc48ae..c9eb757 100644
+--- a/streamApp/Makefile
++++ b/streamApp/Makefile
+@@ -60,6 +60,10 @@ PROD_LIBS += sscan
+ endif
+ endif
+ 
++ifneq ($(words $(DRVASYNI2C)), 0)
++PROD_LIBS += drvAsynI2C
++endif
++
+ ifneq ($(words $(SNCSEQ) $(SYNAPPS)), 0)
+ PROD_LIBS += seq pv
+ endif
+-- 
+2.30.2
+

@@ -57,14 +57,13 @@ class drvAsynI2C : public asynPortDriver {
  private:
 
   // Our data
-  int   _fd;
+  int            _fd;
   unsigned long  _i2cfuncs;
-  int   _slaveAddress;
-  char* _deviceName;
-  asynInterface i2c;
-    
-};
+  int            _slaveAddress;
+  char*          _deviceName;
+  asynInterface  i2c;
 
+};
 
 #endif
 

@@ -128,8 +128,8 @@ asynStatus drvAsynI2C::readOctet( asynUser *pasynUser, char *value, size_t maxCh
 
     nRead = read( _fd, value, maxChars );
     if ( 0 > nRead ) {
-      epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize, 
-                     "Error receiving message from device '%s': %d %s", 
+      epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize,
+                     "Error receiving message from device '%s': %d %s",
                      _deviceName, errno, strerror( errno ) );
       return asynError;
     }
@@ -138,33 +138,33 @@ asynStatus drvAsynI2C::readOctet( asynUser *pasynUser, char *value, size_t maxCh
 
     fd_set fdRead;
     struct timeval t;
-    
+
     // calculate timeout values
     t.tv_sec  = mytimeout / 1000000L;
     t.tv_usec = mytimeout % 1000000L;
-    
+
     FD_ZERO( &fdRead );
     FD_SET( _fd, &fdRead );
-    
+
     // wait until timeout or a message is ready to get read
     int err = select( _fd + 1, &fdRead, NULL, NULL, &t );
-    
+
     // the only one file descriptor is ready for read
     if ( 0 < err ) {
       nRead = read( _fd, value, maxChars );
       if( 0 > nRead ) {
-        epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize, 
-                       "Error receiving message from device '%s': %d %s", 
+        epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize,
+                       "Error receiving message from device '%s': %d %s",
                        _deviceName, errno, strerror( errno ) );
         return asynError;
       }
     }
-    
+
     // nothing is ready, timeout occured
     if ( 0 == err ) return asynTimeout;
     if ( 0 > err )  {
-      epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize, 
-                     "Error receiving message from device '%s': %d %s", 
+      epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize,
+                     "Error receiving message from device '%s': %d %s",
                      _deviceName, errno, strerror( errno ) );
       return asynError;
     }
@@ -175,12 +175,12 @@ asynStatus drvAsynI2C::readOctet( asynUser *pasynUser, char *value, size_t maxCh
     *eomReason = ASYN_EOM_CNT;
   }
 
-  asynPrint( pasynUser, ASYN_TRACEIO_DRIVER, 
+  asynPrint( pasynUser, ASYN_TRACEIO_DRIVER,
              "%s: read %lu bytes from %s, return %s\n",
              portName, (unsigned long)*nActual, _deviceName,
              pasynManager->strStatus( status ) );
-  
-  return status; 
+
+  return status;
 }
 
 //------------------------------------------------------------------------------
@@ -241,8 +241,8 @@ asynStatus drvAsynI2C::writeOctet( asynUser *pasynUser, char const *value, size_
 
       thisWrite = write( _fd, value, nleft );
       if ( 0 > thisWrite ) {
-        epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize, 
-                       "%s: %s write error: %s", 
+        epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize,
+                       "%s: %s write error: %s",
                        portName, _deviceName, strerror( errno ) );
         return asynError;
       }
@@ -251,34 +251,34 @@ asynStatus drvAsynI2C::writeOctet( asynUser *pasynUser, char const *value, size_
 
       fd_set fdWrite;
       struct timeval t;
-      
+
       // calculate timeout values
       t.tv_sec  = mytimeout / 1000000L;
       t.tv_usec = mytimeout % 1000000L;
-      
+
       FD_ZERO( &fdWrite );
       FD_SET( _fd, &fdWrite );
-      
+
       // wait until timeout or device os read to write
       int err = select( _fd + 1, NULL, &fdWrite, NULL, &t );
-      
+
       // the only one file descriptor is ready for writing
       if ( 0 < err ) {
         thisWrite = write( _fd, value, nleft );
         if ( 0 > thisWrite ) {
-          epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize, 
-                         "Error receiving message from device '%s': %d %s", 
+          epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize,
+                         "Error receiving message from device '%s': %d %s",
                          _deviceName, errno, strerror( errno ) );
           return asynError;
         }
         nleft -= thisWrite;
       }
-      
+
       // nothing is ready, timeout occured
       if ( 0 == err ) return asynTimeout;
       if ( 0 > err )  {
-        epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize, 
-                       "Error receiving message from device '%s': %d %s", 
+        epicsSnprintf( pasynUser->errorMessage, pasynUser->errorMessageSize,
+                       "Error receiving message from device '%s': %d %s",
                        _deviceName, errno, strerror( errno ) );
         return asynError;
       }
@@ -292,8 +292,8 @@ asynStatus drvAsynI2C::writeOctet( asynUser *pasynUser, char const *value, size_
              "%s: wrote %lu bytes to %s, return %s\n",
              portName, (unsigned long)*nActual, _deviceName,
              pasynManager->strStatus( status ) );
-  
-  return status; 
+
+  return status;
 }
 
 //------------------------------------------------------------------------------
@@ -340,7 +340,7 @@ asynStatus drvAsynI2C::disconnect( asynUser *pasynUser ) {
     close( _fd );
     _fd = -1;
     pasynManager->exceptionDisconnect(pasynUser);
-  } 
+  }
   return asynSuccess;
 }
 
@@ -392,13 +392,13 @@ drvAsynI2C::drvAsynI2C( const char *portName, const char *ttyName, int autoConne
   }
 }
 
-// Configuration routines.  Called directly, or from the iocsh function below 
+// Configuration routines.  Called directly, or from the iocsh function below
 extern "C" {
   //----------------------------------------------------------------------------
   //! @brief       EPICS iocsh callable function to call constructor
   //!              for the drvAsynI2C class.
   //! @param [in]  portName The name of the asyn port driver to be created.
-  //! @param [in]  ttyName  The name of the interface 
+  //! @param [in]  ttyName  The name of the interface
   //----------------------------------------------------------------------------
   int drvAsynI2CConfigure( const char *portName, const char *ttyName, int autoConnect = 1 ) {
     if( !portName ) {
@@ -431,7 +431,7 @@ extern "C" {
       firstTime = 0;
     }
   }
-  
+
   epicsExportRegistrar( drvAsynI2CRegister );
 }
 
