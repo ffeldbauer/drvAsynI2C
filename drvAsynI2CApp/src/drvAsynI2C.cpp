@@ -353,7 +353,6 @@ asynStatus drvAsynI2C::disconnect( asynUser *pasynUser ) {
 drvAsynI2C::drvAsynI2C( const char *portName, const char *ttyName, int autoConnect ) :
   asynPortDriver( portName,
                   0, // maxAddr
-                  0, // paramTableSize
                   asynCommonMask | asynOctetMask | asynDrvUserMask, // Interface mask
                   asynCommonMask | asynOctetMask,  // Interrupt mask
                   ASYN_CANBLOCK, // asynFlags
